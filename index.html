@@ -1,0 +1,275 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>나의 중독 학점표</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Black+Han+Sans&family=IBM+Plex+Sans+KR:wght@400;500;700&family=IBM+Plex+Mono:wght@500&display=swap">
+<style>
+/* Layout: 한 장짜리 성적표(카드) 위에서 선택 → 문항 → 학점 발급이 차례로 바뀌는 단일 화면 앱 */
+:root{
+  --bg:#EEF2EF; --paper:#FFFFFF; --ink:#16241D; --muted:#5E6E66; --line:#D3DDD7;
+  --board:#1E4A38; --board-ink:#F2F7F4; --accent:#2F7A58;
+  --gA:#2E8B57; --gB:#2A7F9E; --gC:#C99A1E; --gD:#D9702A; --gF:#C8382E;
+  --display:"Black Han Sans","IBM Plex Sans KR",system-ui,sans-serif;
+  --body:"IBM Plex Sans KR","Apple SD Gothic Neo","Malgun Gothic",system-ui,sans-serif;
+  --mono:"IBM Plex Mono",ui-monospace,monospace;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --bg:#0F1613; --paper:#18221D; --ink:#E6EEE9; --muted:#9AABA2; --line:#2C3A33;
+  --board:#24563F; --board-ink:#F2F7F4; --accent:#5DBB8C;
+  --gA:#4CB97D; --gB:#4BA8C8; --gC:#E0B43C; --gD:#EE8A47; --gF:#EE5B50; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#0F1613; --paper:#18221D; --ink:#E6EEE9; --muted:#9AABA2; --line:#2C3A33;
+  --board:#24563F; --board-ink:#F2F7F4; --accent:#5DBB8C;
+  --gA:#4CB97D; --gB:#4BA8C8; --gC:#E0B43C; --gD:#EE8A47; --gF:#EE5B50; color-scheme:dark}
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--ink);font-family:var(--body);font-size:16px;line-height:1.6;
+  padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:20px 40px}
+.wrap{max-width:520px;margin:0 auto;display:flex;flex-direction:column;gap:16px}
+.head{background:var(--board);color:var(--board-ink);border-radius:14px;padding:20px 20px 18px}
+.org{font-size:13px;letter-spacing:.08em;opacity:.8}
+h1{font-family:var(--display);font-weight:400;font-size:34px;line-height:1.15;margin:4px 0 6px;text-wrap:balance}
+.head p{margin:0;font-size:14px;opacity:.88}
+.card{background:var(--paper);border:1px solid var(--line);border-radius:14px;padding:20px}
+.label{font-size:12px;letter-spacing:.1em;color:var(--muted);font-weight:700}
+h2{font-size:20px;margin:4px 0 14px;text-wrap:balance}
+.cats{display:grid;gap:10px}
+.cat{display:flex;align-items:center;gap:14px;width:100%;text-align:left;font:inherit;color:inherit;background:var(--paper);
+  border:1.5px solid var(--line);border-radius:12px;padding:14px 16px;cursor:pointer;transition:border-color .15s,transform .15s}
+.cat:hover{border-color:var(--accent)}
+.cat:active{transform:scale(.99)}
+.cat:focus-visible,.opt:focus-visible,.btn:focus-visible{outline:3px solid var(--accent);outline-offset:2px}
+.code{font-family:var(--mono);font-size:13px;color:var(--board-ink);background:var(--board);border-radius:6px;padding:4px 7px;flex:none}
+.cat b{display:block;font-size:17px}
+.cat span.d{font-size:13px;color:var(--muted)}
+.scale{display:grid;grid-template-columns:repeat(5,1fr);gap:4px;margin-top:6px;font-size:12px;text-align:center}
+.scale div{border-radius:6px;padding:6px 2px;color:#fff;font-weight:700}
+.note{font-size:13px;color:var(--muted);margin:12px 0 0}
+.progress{height:6px;background:var(--line);border-radius:3px;overflow:hidden;margin:10px 0 18px}
+.progress i{display:block;height:100%;background:var(--accent);transition:width .2s}
+.qtop{display:flex;justify-content:space-between;align-items:baseline;gap:8px}
+.qnum{font-family:var(--mono);font-size:13px;color:var(--muted)}
+.q{font-size:19px;font-weight:700;line-height:1.45;margin:0 0 18px;min-height:3em}
+.opts{display:grid;gap:8px}
+.opt{font:inherit;color:inherit;background:var(--paper);border:1.5px solid var(--line);border-radius:10px;padding:13px 16px;
+  text-align:left;cursor:pointer;display:flex;justify-content:space-between;align-items:center}
+.opt:hover{border-color:var(--accent)}
+.opt.sel{border-color:var(--accent);background:color-mix(in srgb,var(--accent) 12%,var(--paper))}
+.opt small{font-family:var(--mono);color:var(--muted)}
+.row{display:flex;gap:10px;margin-top:16px}
+.btn{font:inherit;font-weight:700;border-radius:10px;padding:12px 16px;cursor:pointer;border:1.5px solid var(--line);background:var(--paper);color:var(--ink);flex:1}
+.btn.primary{background:var(--board);color:var(--board-ink);border-color:var(--board)}
+.btn:disabled{opacity:.4;cursor:default}
+.report{display:grid;grid-template-columns:auto 1fr;gap:18px;align-items:center}
+.grade{width:112px;height:112px;border-radius:50%;border:5px solid currentColor;display:grid;place-items:center;
+  font-family:var(--display);font-size:68px;line-height:1;transform:rotate(-8deg)}
+.grade.stamp{animation:stamp .45s cubic-bezier(.2,1.6,.4,1) both}
+@keyframes stamp{from{transform:scale(1.8) rotate(-20deg);opacity:.2}to{transform:scale(1) rotate(-8deg);opacity:1}}
+@media (prefers-reduced-motion:reduce){.grade.stamp{animation:none}}
+.rtitle{font-size:20px;font-weight:700;margin:2px 0}
+.score{font-family:var(--mono);font-size:14px;color:var(--muted);font-variant-numeric:tabular-nums}
+.bar{position:relative;height:10px;border-radius:5px;display:grid;grid-template-columns:repeat(5,1fr);gap:2px;margin:18px 0 6px}
+.bar span{border-radius:3px}
+.bar .pin{position:absolute;top:-6px;width:4px;height:22px;background:var(--ink);border-radius:2px;transform:translateX(-50%)}
+.ticks{display:grid;grid-template-columns:repeat(5,1fr);font-size:11px;color:var(--muted);text-align:center;font-family:var(--mono)}
+.msg{margin:16px 0 0}
+.tips{margin:12px 0 0;padding-left:20px}
+.tips li{margin-bottom:4px}
+.help{border-top:1px dashed var(--line);margin-top:16px;padding-top:12px;font-size:14px}
+.help div{display:flex;justify-content:space-between;gap:8px;flex-wrap:wrap}
+.help b{font-family:var(--mono);user-select:all}
+.foot{font-size:12px;color:var(--muted);text-align:center}
+@media (max-width:380px){.report{grid-template-columns:1fr;justify-items:center;text-align:center}}
+html,body{margin:0}
+body{-webkit-text-size-adjust:100%}
+.field{display:grid;gap:8px;margin-bottom:18px}
+.field>span{font-weight:700;font-size:15px}
+.chips{display:flex;flex-wrap:wrap;gap:8px}
+.chip{font:inherit;font-size:15px;color:inherit;background:var(--paper);border:1.5px solid var(--line);border-radius:999px;padding:8px 14px;cursor:pointer}
+.chip.sel{border-color:var(--accent);background:color-mix(in srgb,var(--accent) 14%,var(--paper));font-weight:700}
+.chip:focus-visible,input:focus-visible{outline:3px solid var(--accent);outline-offset:2px}
+input[type=number]{font:inherit;font-size:16px;color:inherit;background:var(--paper);border:1.5px solid var(--line);border-radius:10px;padding:10px 12px;width:120px}
+.err{color:var(--gF);font-size:14px;margin:0}
+.saved{font-size:13px;color:var(--muted);margin:14px 0 0}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header class="head">
+    <div class="org">청년절제회 · 경각심 캠페인</div>
+    <h1>나의 중독 학점표</h1>
+    <p>한 과목을 골라 15문항에 답하면 이번 학기 성적이 나옵니다. 이름은 묻지 않으며, 결과는 익명 통계로만 쓰입니다.</p>
+  </header>
+
+  <main id="app"></main>
+
+  <p class="foot">이 검사는 스스로 돌아보기 위한 캠페인용 자가점검이며 의학적 진단이 아닙니다.</p>
+</div>
+
+<script>
+const OPTS=[["전혀 아니다",0],["가끔 그렇다",1],["자주 그렇다",2],["거의 항상 그렇다",3]];
+const C={
+ alcohol:{code:"ALC 101",name:"음주",desc:"술자리 빈도, 조절력, 다음 날의 영향",subject:"음주 과목",
+  q:["일주일에 2번 이상 술을 마신다.",
+     "한 번 마시면 소주 1병(또는 맥주 4캔) 이상 마신다.",
+     "처음 생각한 것보다 더 많이 마시게 된다.",
+     "술을 줄이거나 끊으려고 했지만 잘 되지 않았다.",
+     "스트레스를 받거나 우울하면 술 생각이 먼저 난다.",
+     "혼자서 술을 마시는 일이 있다.",
+     "술 마신 다음 날 수업이나 일정에 빠지거나 늦은 적이 있다.",
+     "전날 술자리에서 있었던 일이 기억나지 않은 적이 있다.",
+     "술 때문에 친구나 가족과 다툰 적이 있다.",
+     "술이 없으면 모임이 재미없게 느껴진다.",
+     "같은 양으로는 예전만큼 취하지 않는다.",
+     "술값 때문에 다른 지출을 줄인 적이 있다.",
+     "주변 사람에게서 술을 줄이라는 말을 들은 적이 있다.",
+     "술을 마신 뒤 후회하거나 죄책감을 느낀 적이 있다.",
+     "술 마신 상태로 위험한 행동(운전, 무단횡단, 다툼 등)을 한 적이 있다."],
+  tips:["술 마시는 요일을 정해 두고 그 외에는 약속을 술 없는 장소로 잡아 보세요.","한 번에 마실 양을 미리 정하고, 잔 사이에 물을 한 잔씩 마시세요.","스트레스를 풀 다른 방법(운동, 산책, 대화)을 하나 정해 두세요."]},
+ smoking:{code:"SMK 102",name:"흡연",desc:"전자담배 포함, 의존과 습관의 정도",subject:"흡연 과목",
+  q:["하루에 담배(전자담배 포함)를 10번 이상 피운다.",
+     "아침에 일어나서 30분 안에 담배를 찾는다.",
+     "담배를 피울 수 없는 곳(강의실, 예배당 등)에서 참기 힘들다.",
+     "아플 때도 담배를 피운다.",
+     "식사 후에는 꼭 담배를 피워야 한다.",
+     "스트레스를 받으면 담배부터 생각난다.",
+     "금연을 시도했지만 다시 피우게 되었다.",
+     "담배가 떨어지면 불안하거나 짜증이 난다.",
+     "술자리에서 흡연량이 크게 늘어난다.",
+     "담배를 피우려고 수업이나 대화 중에 자리를 비운다.",
+     "흡연 때문에 기침, 가래, 숨참을 느낀다.",
+     "담뱃값으로 한 달에 상당한 돈을 쓴다.",
+     "흡연 사실을 가족이나 주변에 숨긴다.",
+     "전자담배는 괜찮다고 생각해 실내에서도 피운다.",
+     "주변 사람에게서 담배를 끊으라는 말을 들은 적이 있다."],
+  tips:["담배를 찾는 시간과 상황을 하루만 기록해 보세요. 패턴이 보입니다.","식후·기상 직후처럼 습관이 된 순간에 대신할 행동을 정하세요.","혼자 끊기 어렵다면 금연상담전화의 무료 프로그램을 이용하세요."]},
+ phone:{code:"PHN 103",name:"스마트폰",desc:"SNS·쇼츠·게임, 사용 조절력",subject:"스마트폰 과목",
+  q:["하루 스마트폰 사용 시간이 5시간을 넘는다.",
+     "잠들기 직전과 깨자마자 스마트폰부터 확인한다.",
+     "스마트폰이 곁에 없으면 불안하다.",
+     "알림이 오지 않았는데도 습관적으로 화면을 켠다.",
+     "수업이나 예배 중에도 스마트폰을 본다.",
+     "쇼츠·릴스를 보다가 계획보다 훨씬 오래 시간을 보낸다.",
+     "사용 시간을 줄이려 했지만 실패했다.",
+     "스마트폰 때문에 잠드는 시간이 늦어진다.",
+     "스마트폰 때문에 과제나 해야 할 일을 미룬다.",
+     "친구와 함께 있어도 각자 스마트폰을 보는 시간이 많다.",
+     "SNS 반응(좋아요, 댓글)에 신경이 많이 쓰인다.",
+     "배터리가 부족하면 초조해진다.",
+     "걸으면서도 스마트폰을 본다.",
+     "가족이나 친구에게서 스마트폰 그만 보라는 말을 듣는다.",
+     "스마트폰 없이 하루를 보내는 것은 상상하기 어렵다."],
+  tips:["잠자리에는 스마트폰을 두지 말고 충전기를 방 밖에 두세요.","자주 여는 앱 하나의 알림을 끄고 일주일 지켜보세요.","수업·예배 시간에는 가방 속에 넣어 두는 규칙을 친구와 함께 정해 보세요."]}
+};
+const GR=[
+ {g:"A",max:8,c:"--gA",t:"건강한 생활",m:"현재 습관을 잘 관리하고 있습니다. 지금처럼 스스로 조절하는 힘을 지켜 가세요."},
+ {g:"B",max:17,c:"--gB",t:"관심 필요",m:"대체로 괜찮지만 습관으로 굳어지기 시작한 부분이 보입니다. 지금 점검하면 쉽게 되돌릴 수 있습니다."},
+ {g:"C",max:26,c:"--gC",t:"주의 단계",m:"조절이 어려운 순간이 자주 있습니다. 생활에 영향을 주기 전에 구체적인 계획을 세워 보세요."},
+ {g:"D",max:35,c:"--gD",t:"위험 단계",m:"일상과 관계에 영향이 나타나고 있습니다. 혼자보다 주변 사람이나 상담기관의 도움을 받는 것이 좋습니다."},
+ {g:"F",max:45,c:"--gF",t:"도움 필요",m:"의존 양상이 뚜렷합니다. 부끄러운 일이 아닙니다. 전문 상담을 꼭 받아 보시길 권합니다."}
+];
+const HELP={
+ alcohol:[["정신건강 위기상담","1577-0199"],["지역 중독관리통합지원센터","보건소 문의"]],
+ smoking:[["금연상담전화","1544-9030"],["보건소 금연클리닉","무료"]],
+ phone:[["스마트쉼센터 상담","1599-0075"],["정신건강 위기상담","1577-0199"]]
+};
+const app=document.getElementById("app");
+let cat=null,idx=0,ans=[];
+const profile={year:null,age:"",gender:null};
+const YEARS=["1학년","2학년","3학년","4학년","대학원생","졸업/기타","응답 안 함"];
+const GENDERS=["남성","여성","응답 안 함"];
+const css=v=>`var(${v})`;
+const esc=s=>s.replace(/[&<>]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;"}[c]));
+
+function home(){
+  cat=null;
+  app.innerHTML=`<section class="card">
+   <div class="label">수강 신청</div><h2>검사할 과목을 하나 고르세요</h2>
+   <div class="cats">${Object.entries(C).map(([k,v])=>`
+     <button class="cat" data-k="${k}"><span class="code">${v.code}</span>
+     <span><b>${v.name}</b><span class="d">${v.desc}</span></span></button>`).join("")}</div>
+   <p class="note">평가 기준 · 15문항 × 0~3점 = 45점 만점 (점수가 낮을수록 좋은 학점)</p>
+   <div class="scale">${GR.map((g,i)=>`<div style="background:${css(g.c)}">${g.g}<br><span style="font-weight:400">${i?GR[i-1].max+1:0}–${g.max}</span></div>`).join("")}</div>
+  </section>`;
+  app.querySelectorAll(".cat").forEach(b=>b.onclick=()=>start(b.dataset.k));
+}
+function start(k){cat=k;idx=0;ans=new Array(15).fill(null);(profile.year&&profile.gender)?quiz():about();window.scrollTo(0,0)}
+function about(){
+  const v=C[cat];
+  app.innerHTML=`<section class="card">
+   <div class="label">${v.code} · 학적 정보</div><h2>시작 전에 세 가지만 알려 주세요</h2>
+   <div class="field"><span>학년</span><div class="chips" id="years">${YEARS.map(y=>`<button class="chip${profile.year===y?" sel":""}" data-v="${y}">${y}</button>`).join("")}</div></div>
+   <div class="field"><label for="age"><span style="font-weight:700">나이 (만 나이)</span></label><input id="age" type="number" inputmode="numeric" min="14" max="99" placeholder="예: 21" value="${profile.age}"></div>
+   <div class="field"><span>성별</span><div class="chips" id="genders">${GENDERS.map(g=>`<button class="chip${profile.gender===g?" sel":""}" data-v="${g}">${g}</button>`).join("")}</div></div>
+   <p class="err" id="err" hidden></p>
+   <div class="row"><button class="btn" id="back">과목 다시 고르기</button><button class="btn primary" id="go">검사 시작</button></div>
+   <p class="note">이름이나 연락처는 묻지 않습니다. 결과는 익명 통계로만 쓰입니다.</p>
+  </section>`;
+  const pick=(id,key)=>app.querySelectorAll("#"+id+" .chip").forEach(b=>b.onclick=()=>{profile[key]=b.dataset.v;app.querySelectorAll("#"+id+" .chip").forEach(x=>x.classList.toggle("sel",x===b))});
+  pick("years","year");pick("genders","gender");
+  document.getElementById("back").onclick=home;
+  document.getElementById("go").onclick=()=>{
+    const a=document.getElementById("age").value.trim(), n=parseInt(a,10), err=document.getElementById("err");
+    let m="";
+    if(!profile.year)m="학년을 골라 주세요.";
+    else if(!(n>=14&&n<=99))m="나이를 숫자로 입력해 주세요. (14~99)";
+    else if(!profile.gender)m="성별을 골라 주세요.";
+    if(m){err.textContent=m;err.hidden=false;return}
+    profile.age=String(n);quiz();window.scrollTo(0,0);
+  };
+}
+const SAVE_URL="https://script.google.com/macros/s/AKfycbxfVi1u7m9h0lJ96QDHCWZizCFbEiefUW_dizkpf_Qn3BdYvk-0MFpP4ShElTf3Kt_b/exec";
+function save(total){
+  const el=document.getElementById("saved");
+  const data={cat,answers:ans.slice(),year:profile.year,age:profile.age,gender:profile.gender};
+  fetch(SAVE_URL,{method:"POST",mode:"no-cors",credentials:"omit",headers:{"Content-Type":"text/plain;charset=utf-8"},body:JSON.stringify(data)})
+    .then(()=>{el.textContent="결과가 익명 통계로 기록되었습니다."})
+    .catch(()=>{el.textContent="결과를 기록하지 못했습니다. 학점 확인에는 영향이 없습니다."});
+}
+function quiz(){
+  const v=C[cat];
+  app.innerHTML=`<section class="card">
+   <div class="qtop"><div class="label">${v.code} · ${v.name}</div><div class="qnum">${String(idx+1).padStart(2,"0")} / 15</div></div>
+   <div class="progress"><i style="width:${(idx/15)*100}%"></i></div>
+   <p class="q">${esc(v.q[idx])}</p>
+   <div class="opts">${OPTS.map(([t,s])=>`<button class="opt${ans[idx]===s?" sel":""}" data-s="${s}">${t}<small>${s}점</small></button>`).join("")}</div>
+   <div class="row"><button class="btn" id="prev">${idx?"이전 문항":"과목 다시 고르기"}</button></div>
+  </section>`;
+  app.querySelectorAll(".opt").forEach(b=>b.onclick=()=>{
+    ans[idx]=+b.dataset.s;
+    b.classList.add("sel");
+    setTimeout(()=>{ if(idx<14){idx++;quiz()} else result() },160);
+  });
+  document.getElementById("prev").onclick=()=>{ if(idx){idx--;quiz()} else home() };
+}
+function result(){
+  const v=C[cat], total=ans.reduce((a,b)=>a+b,0), g=GR.find(x=>total<=x.max);
+  const pos=Math.min(100,(total/45)*100);
+  app.innerHTML=`<section class="card">
+   <div class="label">성적 통지서 · ${v.code}</div>
+   <div class="report" style="margin-top:12px">
+     <div class="grade stamp" style="color:${css(g.c)}" aria-label="학점 ${g.g}">${g.g}</div>
+     <div><div class="label">${v.subject}</div>
+       <div class="rtitle">${g.t}</div>
+       <div class="score">중독 지수 ${total} / 45점</div></div>
+   </div>
+   <div class="bar">${GR.map(x=>`<span style="background:${css(x.c)}"></span>`).join("")}<i class="pin" style="left:${pos}%"></i></div>
+   <div class="ticks">${GR.map(x=>`<span>${x.g}</span>`).join("")}</div>
+   <p class="msg">${g.m}</p>
+   ${g.g==="A"?"":`<div class="label" style="margin-top:14px">다음 학기를 위한 과제</div><ul class="tips">${v.tips.map(t=>`<li>${t}</li>`).join("")}</ul>`}
+   <div class="help"><div class="label" style="margin-bottom:6px">도움받을 수 있는 곳</div>
+     ${HELP[cat].map(([n,p])=>`<div><span>${n}</span><b>${p}</b></div>`).join("")}</div>
+   <p class="saved" id="saved">결과를 기록하는 중…</p>
+   <div class="row"><button class="btn" id="re">다시 검사</button><button class="btn primary" id="other">다른 과목 검사</button></div>
+  </section>`;
+  document.getElementById("re").onclick=()=>start(cat);
+  document.getElementById("other").onclick=()=>{home();window.scrollTo(0,0)};
+  window.scrollTo(0,0);
+  save(total);
+}
+home();
+</script>
+</body>
+</html>
